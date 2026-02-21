@@ -31,6 +31,19 @@ Parallelization guidance:
 - After implementation: add `done` comment with changed files and verification commands.
 - Keep parent issue `#1` as progress index.
 
+## PR Rule (Mandatory)
+- Do not push implementation commits directly to `main`.
+- Create a feature branch and open PR to `main`.
+- Merge only after at least one approval and validation completion.
+- Use squash merge.
+
+PR quick flow:
+```bash
+git checkout -b feat/<topic>
+git push -u origin feat/<topic>
+gh pr create --base main --fill
+```
+
 ## Validation Rule
 Run at minimum:
 ```bash

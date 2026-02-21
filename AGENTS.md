@@ -14,6 +14,9 @@ Execution workflow is documented in:
 - Prefer `rg`/`rg --files` for search.
 - Do not modify files outside this repository unless explicitly requested.
 - Validate changes with lightweight checks before finishing.
+- Follow PR-only policy:
+  - Never merge by direct push to `main`.
+  - Use feature branch -> PR -> review -> squash merge.
 
 ## Codex Preflight Checklist
 - Git user is configured (`user.name`, `user.email`).
@@ -26,3 +29,7 @@ Execution workflow is documented in:
 - Default `--qi2-repo` now points to this repository root.
 - Run example:
   - `python3 agent_office/live_server.py --port 8765`
+
+## Collaboration Docs
+- PR and merge rules: `CONTRIBUTING.md`
+- PR template: `.github/pull_request_template.md`

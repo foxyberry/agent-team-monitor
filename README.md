@@ -45,6 +45,10 @@ Key APIs:
 - `WS /ws/office`
 - `POST /api/integrations/agent-office/sync`
 
+## Contribution Policy
+- PR-only merge workflow is mandatory.
+- See `CONTRIBUTING.md` and `.github/pull_request_template.md`.
+
 Real data sync (from agent_office server):
 ```bash
 curl -X POST http://127.0.0.1:8765/api/integrations/agent-office/sync \
