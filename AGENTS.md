@@ -5,8 +5,12 @@ This repository root is:
 
 Codex should treat this directory as the default project root.
 
+Execution workflow is documented in:
+- `WORKFLOW.md`
+
 ## Default Working Rules
 - Always run commands from this root unless a task requires a subdirectory.
+- Never inspect or modify sibling repositories unless explicitly instructed.
 - Prefer `rg`/`rg --files` for search.
 - Do not modify files outside this repository unless explicitly requested.
 - Validate changes with lightweight checks before finishing.
