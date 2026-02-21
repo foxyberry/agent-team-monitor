@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Office</title>
+  <style>
+    :root { --bg:#0c111b; --panel:#131c2b; --line:#21324f; --text:#d9e7ff; --muted:#8da4c7; --ok:#22c55e; --warn:#f59e0b; --wait:#38bdf8; --done:#a78bfa; }
+    * { box-sizing: border-box; }
+    body { margin:0; background: radial-gradient(1300px 700px at 20% -10%, #1a2842 0%, var(--bg) 60%); color:var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .wrap { display:grid; grid-template-columns: 280px 1fr 360px; gap:12px; height:100vh; padding:12px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+    .hd { padding:10px 12px; border-bottom:1px solid var(--line); font-size:13px; color:#a9c2e8; display:flex; justify-content:space-between; align-items:center; }
+    .bd { padding:10px; height:calc(100% - 42px); overflow:auto; }
+    .presence { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:12px; }
+    .dot { width:8px; height:8px; border-radius:999px; }
+    .chat { display:flex; flex-direction:column; height:100%; }
+    .msgs { flex:1; overflow:auto; }
+    .msg { margin:8px 0; font-size:12px; line-height:1.35; }
+    .msg .who { color:#98b7e8; }
+    .msg .at { color:var(--muted); font-size:11px; margin-left:8px; }
+    .input { display:flex; gap:8px; margin-top:8px; }
+    input, select, button { border:1px solid var(--line); background:#0f1726; color:var(--text); padding:8px; border-radius:8px; font-size:12px; }
+    button { cursor:pointer; }
+    .graph { position:relative; min-height:600px; }
+    .node { position:absolute; width:210px; padding:8px; border:1px solid var(--line); border-radius:10px; background:#102038; font-size:12px; }
+    .node .id { color:#9dc0ef; font-size:11px; }
+    .badge { display:inline-block; margin-top:4px; padding:2px 6px; border-radius:999px; font-size:10px; }
+    .pending { background:#2a2f3a; }
+    .in_progress { background:#4a3a17; }
+    .completed { background:#2c2344; }
+    .deleted { background:#3a1f1f; }
+    svg { position:absolute; inset:0; pointer-events:none; }
+    .toolbar { display:flex; gap:8px; margin-bottom:8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="panel">
+      <div class="hd">Presence <span id="ws">ws: connecting</span></div>
+      <div class="bd" id="presence"></div>
+    </section>
+
+    <section class="panel">
+      <div class="hd">Task Graph</div>
+      <div class="bd">
+        <div class="toolbar">
+          <button id="refreshGraph">Refresh</button>
+          <button id="syncOffice">Sync Real Data</button>
+          <input id="teamFilter" placeholder="team_name filter" />
+        </div>
+        <div id="graph" class="graph"><svg id="edges"></svg></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="hd">Chat</div>
+      <div class="bd chat">
+        <div style="display:flex; gap:8px;">
+          <select id="room"><option value="general">general</option></select>
+          <input id="sender" value="operator" />
+        </div>
+        <div class="msgs" id="msgs"></div>
+        <div class="input">
+          <input id="text" placeholder="Type message..." style="flex:1;" />
+          <button id="send">Send</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const byId = (id) => document.getElementById(id);
+    const wsLabel = byId("ws");
+    const presenceEl = byId("presence");
+    const graphEl = byId("graph");
+    const edgesEl = byId("edges");
+    const msgsEl = byId("msgs");
+    const roomEl = byId("room");
+    const teamFilterEl = byId("teamFilter");
+
+    function fmtTs(ts) { return ts ? new Date(ts).toLocaleTimeString() : ""; }
+
+    async function fetchJson(url, opts) {
+      const res = await fetch(url, opts);
+      if (!res.ok) throw new Error(await res.text());
+      return await res.json();
+    }
+
+    async function loadPresence() {
+      const rows = await fetchJson("/api/agent-presence");
+      presenceEl.innerHTML = rows.map(r => {
+        const color = r.state === "active" ? "#22c55e" : (r.state === "idle" ? "#f59e0b" : "#6b7280");
+        return `<div class="presence"><span class="dot" style="background:${color}"></span><b>${r.agent_name}</b> <span style="color:#8da4c7">${r.state}</span></div>`;
+      }).join("");
+    }
+
+    function layout(nodes, edges) {
+      const parents = {};
+      const indeg = {};
+      nodes.forEach(n => { parents[n.id] = []; indeg[n.id] = 0; });
+      edges.forEach(e => { if (parents[e.target]) { parents[e.target].push(e.source); indeg[e.target] += 1; } });
+      const level = {};
+      const q = nodes.filter(n => indeg[n.id] === 0).map(n => n.id);
+      q.forEach(id => level[id] = 0);
+      while (q.length) {
+        const cur = q.shift();
+        edges.filter(e => e.source === cur).forEach(e => {
+          level[e.target] = Math.max(level[e.target] || 0, (level[cur] || 0) + 1);
+          indeg[e.target] -= 1;
+          if (indeg[e.target] === 0) q.push(e.target);
+        });
+      }
+      const lanes = {};
+      nodes.forEach(n => {
+        const l = level[n.id] || 0;
+        if (!lanes[l]) lanes[l] = [];
+        lanes[l].push(n);
+      });
+      const pos = {};
+      Object.entries(lanes).forEach(([l, list]) => {
+        list.forEach((n, i) => {
+          pos[n.id] = { x: 30 + Number(l) * 270, y: 30 + i * 120 };
+        });
+      });
+      return pos;
+    }
+
+    async function loadGraph() {
+      const team = teamFilterEl.value.trim();
+      const query = team ? `?team_name=${encodeURIComponent(team)}` : "";
+      const g = await fetchJson(`/api/agent-graph${query}`);
+      const pos = layout(g.nodes, g.edges);
+      graphEl.querySelectorAll(".node").forEach(n => n.remove());
+      g.nodes.forEach(n => {
+        const p = pos[n.id] || {x: 20, y: 20};
+        const el = document.createElement("div");
+        el.className = "node";
+        el.style.left = `${p.x}px`;
+        el.style.top = `${p.y}px`;
+        el.innerHTML = `<div><b>${n.label}</b></div><div class="id">${n.id}</div><span class="badge ${n.status}">${n.status}</span>`;
+        graphEl.appendChild(el);
+      });
+      edgesEl.setAttribute("width", String(graphEl.clientWidth));
+      edgesEl.setAttribute("height", String(Math.max(800, graphEl.scrollHeight)));
+      edgesEl.innerHTML = g.edges.map(e => {
+        const s = pos[e.source], t = pos[e.target];
+        if (!s || !t) return "";
+        const x1 = s.x + 210, y1 = s.y + 35, x2 = t.x, y2 = t.y + 35;
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#3d5a86" stroke-width="2"/>`;
+      }).join("");
+    }
+
+    async function loadRoomsAndMessages() {
+      const rooms = await fetchJson("/api/agent-chat/rooms").catch(() => []);
+      if (rooms.length === 0) {
+        await fetchJson("/api/agent-chat/rooms", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({room_key: "general", room_name: "General"})
+        });
+      }
+      const rows = await fetchJson("/api/agent-chat/rooms");
+      roomEl.innerHTML = rows.map(r => `<option value="${r.room_key}">${r.room_name}</option>`).join("");
+      await loadMessages();
+    }
+
+    async function loadMessages() {
+      const key = roomEl.value;
+      const rows = await fetchJson(`/api/agent-chat/messages?room_key=${encodeURIComponent(key)}&limit=100`);
+      msgsEl.innerHTML = rows.map(m => `<div class="msg"><span class="who">${m.sender_name}</span><span class="at">${fmtTs(m.created_at)}</span><div>${m.message}</div></div>`).join("");
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const text = byId("text").value.trim();
+      if (!text) return;
+      await fetchJson("/api/agent-chat/messages", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          room_key: roomEl.value,
+          sender_type: "user",
+          sender_name: byId("sender").value || "operator",
+          message: text,
+          metadata_json: {}
+        }),
+      });
+      byId("text").value = "";
+      await loadMessages();
+    }
+
+    async function syncRealData() {
+      await fetchJson("/api/integrations/agent-office/sync", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({})
+      });
+      await Promise.all([loadPresence(), loadGraph(), loadRoomsAndMessages()]);
+    }
+
+    function startWs() {
+      const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/office`);
+      ws.onopen = () => { wsLabel.textContent = "ws: connected"; };
+      ws.onclose = () => { wsLabel.textContent = "ws: disconnected"; setTimeout(startWs, 1500); };
+      ws.onmessage = async (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.event_type.startsWith("chat.")) await loadMessages();
+        if (msg.event_type.startsWith("task.") || msg.event_type.startsWith("presence.")) {
+          await Promise.all([loadGraph(), loadPresence()]);
+        }
+      };
+      setInterval(() => { try { ws.send("ping"); } catch {} }, 15000);
+    }
+
+    byId("send").addEventListener("click", sendMessage);
+    byId("refreshGraph").addEventListener("click", loadGraph);
+    byId("syncOffice").addEventListener("click", syncRealData);
+    roomEl.addEventListener("change", loadMessages);
+    teamFilterEl.addEventListener("change", loadGraph);
+    byId("text").addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
+
+    Promise.all([loadPresence(), loadGraph(), loadRoomsAndMessages()]);
+    startWs();
+  </script>
+</body>
+</html>
