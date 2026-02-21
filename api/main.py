@@ -13,6 +13,7 @@ from api.routers import (
     agent_graph_router,
     agent_presence_router,
     agent_task_router,
+    integrations_router,
 )
 
 app = FastAPI(title="Agent Task Tracking API", version="0.1.0")
@@ -20,6 +21,7 @@ app.include_router(agent_task_router)
 app.include_router(agent_chat_router)
 app.include_router(agent_graph_router)
 app.include_router(agent_presence_router)
+app.include_router(integrations_router)
 
 
 @app.on_event("startup")

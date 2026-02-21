@@ -43,3 +43,11 @@ Key APIs:
 - `GET /api/agent-chat/messages?room_key=general`
 - `GET /api/agent-presence`
 - `WS /ws/office`
+- `POST /api/integrations/agent-office/sync`
+
+Real data sync (from agent_office server):
+```bash
+curl -X POST http://127.0.0.1:8765/api/integrations/agent-office/sync \
+  -H "Content-Type: application/json" \
+  -d '{"source_url":"http://127.0.0.1:8766/api/agent-office/status"}'
+```

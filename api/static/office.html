@@ -46,6 +46,7 @@
       <div class="bd">
         <div class="toolbar">
           <button id="refreshGraph">Refresh</button>
+          <button id="syncOffice">Sync Real Data</button>
           <input id="teamFilter" placeholder="team_name filter" />
         </div>
         <div id="graph" class="graph"><svg id="edges"></svg></div>
@@ -189,6 +190,15 @@
       await loadMessages();
     }
 
+    async function syncRealData() {
+      await fetchJson("/api/integrations/agent-office/sync", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({})
+      });
+      await Promise.all([loadPresence(), loadGraph(), loadRoomsAndMessages()]);
+    }
+
     function startWs() {
       const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/office`);
       ws.onopen = () => { wsLabel.textContent = "ws: connected"; };
@@ -205,6 +215,7 @@
 
     byId("send").addEventListener("click", sendMessage);
     byId("refreshGraph").addEventListener("click", loadGraph);
+    byId("syncOffice").addEventListener("click", syncRealData);
     roomEl.addEventListener("change", loadMessages);
     teamFilterEl.addEventListener("change", loadGraph);
     byId("text").addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
@@ -214,4 +225,3 @@
   </script>
 </body>
 </html>
-
