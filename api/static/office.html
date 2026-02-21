@@ -275,30 +275,79 @@
     }
 
     function layout(nodes, edges) {
-      const indeg = {};
-      nodes.forEach(n => { indeg[n.id] = 0; });
-      edges.forEach(e => { if (indeg[e.target] !== undefined) indeg[e.target] += 1; });
-      const level = {};
-      const q = nodes.filter(n => indeg[n.id] === 0).map(n => n.id);
-      q.forEach(id => { level[id] = 0; });
-      while (q.length) {
-        const cur = q.shift();
-        edges.filter(e => e.source === cur).forEach(e => {
-          level[e.target] = Math.max(level[e.target] || 0, (level[cur] || 0) + 1);
-          indeg[e.target] -= 1;
-          if (indeg[e.target] === 0) q.push(e.target);
-        });
+      const byId = new Map(nodes.map(n => [n.id, n]));
+      const out = new Map(nodes.map(n => [n.id, []]));
+      const undirected = new Map(nodes.map(n => [n.id, new Set()]));
+      const indeg = Object.fromEntries(nodes.map(n => [n.id, 0]));
+
+      edges.forEach(e => {
+        if (!byId.has(e.source) || !byId.has(e.target)) return;
+        out.get(e.source).push(e.target);
+        undirected.get(e.source).add(e.target);
+        undirected.get(e.target).add(e.source);
+        indeg[e.target] += 1;
+      });
+
+      // connected components for better packing of disjoint subgraphs
+      const components = [];
+      const seen = new Set();
+      for (const n of nodes) {
+        if (seen.has(n.id)) continue;
+        const stack = [n.id];
+        const comp = [];
+        seen.add(n.id);
+        while (stack.length) {
+          const cur = stack.pop();
+          comp.push(cur);
+          for (const nxt of undirected.get(cur)) {
+            if (!seen.has(nxt)) {
+              seen.add(nxt);
+              stack.push(nxt);
+            }
+          }
+        }
+        components.push(comp);
       }
-      const lanes = {};
-      nodes.forEach(n => {
-        const l = level[n.id] || 0;
-        if (!lanes[l]) lanes[l] = [];
-        lanes[l].push(n);
-      });
+
       const pos = {};
-      Object.entries(lanes).forEach(([l, list]) => {
-        list.forEach((n, i) => { pos[n.id] = { x: 20 + Number(l) * 280, y: 20 + i * 120 }; });
-      });
+      const xGap = 300;
+      const yGap = 128;
+      let yOffset = 20;
+
+      for (const comp of components) {
+        const compSet = new Set(comp);
+        const compIndeg = {};
+        comp.forEach(id => { compIndeg[id] = indeg[id] || 0; });
+        const q = comp.filter(id => compIndeg[id] === 0);
+        const level = Object.fromEntries(comp.map(id => [id, 0]));
+        while (q.length) {
+          const cur = q.shift();
+          for (const nxt of out.get(cur) || []) {
+            if (!compSet.has(nxt)) continue;
+            level[nxt] = Math.max(level[nxt], level[cur] + 1);
+            compIndeg[nxt] -= 1;
+            if (compIndeg[nxt] === 0) q.push(nxt);
+          }
+        }
+
+        const lanes = {};
+        comp.forEach(id => {
+          const l = level[id] || 0;
+          if (!lanes[l]) lanes[l] = [];
+          lanes[l].push(byId.get(id));
+        });
+
+        const laneKeys = Object.keys(lanes).map(Number).sort((a, b) => a - b);
+        let compHeight = 0;
+        for (const lk of laneKeys) {
+          const list = lanes[lk].sort((a, b) => String(a.label).localeCompare(String(b.label)));
+          list.forEach((n, i) => {
+            pos[n.id] = { x: 20 + lk * xGap, y: yOffset + i * yGap };
+          });
+          compHeight = Math.max(compHeight, list.length * yGap);
+        }
+        yOffset += Math.max(160, compHeight + 40);
+      }
       return pos;
     }
 
@@ -322,8 +371,11 @@
         });
         graphEl.appendChild(el);
       });
-      edgesEl.setAttribute("width", String(graphEl.clientWidth));
-      edgesEl.setAttribute("height", String(Math.max(700, graphEl.scrollHeight)));
+      const maxX = Math.max(0, ...Object.values(pos).map(p => p.x));
+      const maxY = Math.max(0, ...Object.values(pos).map(p => p.y));
+      edgesEl.setAttribute("width", String(Math.max(graphEl.clientWidth, maxX + 320)));
+      edgesEl.setAttribute("height", String(Math.max(700, maxY + 220)));
+      graphEl.style.minHeight = `${Math.max(640, maxY + 180)}px`;
       edgesEl.innerHTML = g.edges.map(e => {
         const s = pos[e.source], t = pos[e.target];
         if (!s || !t) return "";
