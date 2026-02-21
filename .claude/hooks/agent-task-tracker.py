@@ -43,6 +43,20 @@ def _spawn_curl(method: str, url: str, payload: dict[str, Any]) -> None:
     )
 
 
+def _spawn_presence_upsert(tool_input: dict[str, Any], session_id: str | None) -> None:
+    agent_name = tool_input.get("agent_name") or tool_input.get("agent_type")
+    if not agent_name:
+        return
+    payload = {
+        "agent_name": agent_name,
+        "agent_type": tool_input.get("agent_type"),
+        "session_id": session_id,
+        "team_name": tool_input.get("team_name"),
+        "state": "active",
+    }
+    _spawn_curl("POST", f"{API_BASE}/api/agent-presence", payload)
+
+
 def main() -> int:
     try:
         raw = sys.stdin.read().strip()
@@ -73,8 +87,10 @@ def main() -> int:
             "description": tool_input.get("description"),
             "status": tool_input.get("status", "pending"),
             "metadata_json": {"source": "post_tool_use_hook"},
+            "parent_task_id": tool_input.get("parent_task_id") or tool_input.get("parentTaskId"),
         }
         _spawn_curl("POST", f"{API_BASE}/api/agent-tasks", payload)
+        _spawn_presence_upsert(tool_input, session_id)
         return 0
 
     payload = {
@@ -85,8 +101,10 @@ def main() -> int:
         "description": tool_input.get("description"),
         "files_modified": tool_input.get("files_modified"),
         "metadata_json": {"source": "post_tool_use_hook_update"},
+        "parent_task_id": tool_input.get("parent_task_id") or tool_input.get("parentTaskId"),
     }
     _spawn_curl("PUT", f"{API_BASE}/api/agent-tasks/{task_id}", payload)
+    _spawn_presence_upsert(tool_input, session_id)
     return 0
 
 

@@ -44,4 +44,12 @@ Smoke test:
 curl -X POST http://127.0.0.1:8765/api/agent-tasks -H "Content-Type: application/json" -d '{"task_id":"test-1","subject":"Test task","status":"pending"}'
 curl -X PUT http://127.0.0.1:8765/api/agent-tasks/test-1 -H "Content-Type: application/json" -d '{"task_id":"test-1","status":"completed"}'
 curl http://127.0.0.1:8765/api/agent-tasks
+curl http://127.0.0.1:8765/api/agent-graph
+curl http://127.0.0.1:8765/api/agent-chat/rooms
+curl http://127.0.0.1:8765/api/agent-presence
+```
+
+UI:
+```bash
+open http://127.0.0.1:8765/ui
 ```

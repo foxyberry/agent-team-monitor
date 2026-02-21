@@ -17,6 +17,7 @@ class AgentTaskCreateRequest(BaseModel):
     description: str | None = None
     status: TaskStatus = "pending"
     metadata_json: dict[str, Any] = Field(default_factory=dict)
+    parent_task_id: str | None = Field(default=None, max_length=64)
 
 
 class AgentTaskUpdateRequest(BaseModel):
@@ -27,6 +28,7 @@ class AgentTaskUpdateRequest(BaseModel):
     description: str | None = None
     files_modified: list[str] | None = None
     metadata_json: dict[str, Any] | None = None
+    parent_task_id: str | None = Field(default=None, max_length=64)
 
 
 class AgentTaskResponse(BaseModel):
@@ -51,4 +53,3 @@ class AgentTaskResponse(BaseModel):
 class AgentTaskListResponse(BaseModel):
     tasks: list[AgentTaskResponse]
     total_count: int
-

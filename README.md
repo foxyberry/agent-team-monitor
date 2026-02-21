@@ -30,3 +30,16 @@ Run:
 ```bash
 python3 -m uvicorn api.main:app --port 8765
 ```
+
+UI:
+```bash
+open http://127.0.0.1:8765/ui
+```
+
+Key APIs:
+- `GET /api/agent-tasks`
+- `GET /api/agent-graph`
+- `GET /api/agent-chat/rooms`
+- `GET /api/agent-chat/messages?room_key=general`
+- `GET /api/agent-presence`
+- `WS /ws/office`

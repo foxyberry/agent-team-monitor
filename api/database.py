@@ -15,6 +15,9 @@ Base = declarative_base()
 
 # Register models here so metadata has all tables.
 import api.models.agent_task  # noqa: F401,E402
+import api.models.agent_task_edge  # noqa: F401,E402
+import api.models.agent_chat  # noqa: F401,E402
+import api.models.agent_presence  # noqa: F401,E402
 
 
 def get_db() -> Generator:
@@ -27,4 +30,3 @@ def get_db() -> Generator:
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
-
