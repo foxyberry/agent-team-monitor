@@ -106,6 +106,7 @@
             <option value="200">200</option>
             <option value="400">400</option>
           </select>
+          <label class="pill"><input id="showNodeId" type="checkbox" style="vertical-align:middle;" /> show id</label>
           <span class="pill" id="lastSync">last sync: -</span>
           <span class="pill" id="syncStatus">sync: idle</span>
           <span class="pill" id="graphStats">graph: -</span>
@@ -175,6 +176,7 @@
     const syncSourceUrlEl = byId("syncSourceUrl");
     const graphLimitEl = byId("graphLimit");
     const graphStatsEl = byId("graphStats");
+    const showNodeIdEl = byId("showNodeId");
 
     const modeBoardBtn = byId("modeBoard");
     const modeGraphBtn = byId("modeGraph");
@@ -397,7 +399,8 @@
         el.className = `node ${active}`;
         el.style.left = `${p.x}px`;
         el.style.top = `${p.y}px`;
-        el.innerHTML = `<div><b>${esc(n.label)}</b></div><div class="id">${esc(n.id)}</div><span class="badge ${esc(n.status)}">${esc(n.status)}</span>`;
+        const idLine = showNodeIdEl.checked ? `<div class="id">id: ${esc(n.id)}</div>` : "";
+        el.innerHTML = `<div><b>${esc(n.label)}</b></div>${idLine}<span class="badge ${esc(n.status)}">${esc(n.status)}</span>`;
         el.addEventListener("click", () => {
           selectedTaskId = n.id;
           renderGraph();
@@ -599,6 +602,7 @@
     autoSyncEl.addEventListener("change", resetAutoSyncTimer);
     autoSyncSecEl.addEventListener("change", resetAutoSyncTimer);
     graphLimitEl.addEventListener("change", renderGraph);
+    showNodeIdEl.addEventListener("change", renderGraph);
 
     roomEl.addEventListener("change", async () => {
       oldestMessageId = null;
