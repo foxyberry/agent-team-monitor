@@ -17,6 +17,11 @@ Execution workflow is documented in:
 - Follow PR-only policy:
   - Never merge by direct push to `main`.
   - Use feature branch -> PR -> review -> squash merge.
+- At task end, always include a short retrospective:
+  - user directives/corrections,
+  - delay causes,
+  - auto-approval candidates,
+  - next-run defaults.
 
 ## Codex Preflight Checklist
 - Git user is configured (`user.name`, `user.email`).

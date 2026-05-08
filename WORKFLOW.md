@@ -44,6 +44,26 @@ git push -u origin feat/<topic>
 gh pr create --base main --fill
 ```
 
+## Post-Task Retrospective Rule (Mandatory)
+At the end of every task, include a short retrospective block in the final update:
+- `User Signals`: direct commands/corrections from user (what was emphasized)
+- `Waiting Causes`: approvals/network/env delays that slowed execution
+- `Automation Candidates`: command prefixes to auto-approve next time
+- `Next-Run Defaults`: concrete defaults to avoid re-asking
+
+Retrospective template:
+```text
+[Retrospective]
+User Signals:
+- ...
+Waiting Causes:
+- ...
+Automation Candidates:
+- ["..."]
+Next-Run Defaults:
+- ...
+```
+
 ## Validation Rule
 Run at minimum:
 ```bash

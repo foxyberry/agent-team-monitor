@@ -43,7 +43,10 @@ async def create_message(payload: ChatMessageCreateRequest) -> ChatMessageRespon
 
 
 @router.get("/messages", response_model=list[ChatMessageResponse])
-def list_messages(room_key: str = Query(...), limit: int = Query(default=50, ge=1, le=200)) -> list[ChatMessageResponse]:
-    rows = agent_chat_service.list_messages(room_key=room_key, limit=limit)
+def list_messages(
+    room_key: str = Query(...),
+    limit: int = Query(default=50, ge=1, le=200),
+    before_id: int | None = Query(default=None, ge=1),
+) -> list[ChatMessageResponse]:
+    rows = agent_chat_service.list_messages(room_key=room_key, limit=limit, before_id=before_id)
     return [ChatMessageResponse.model_validate(r) for r in rows]
-

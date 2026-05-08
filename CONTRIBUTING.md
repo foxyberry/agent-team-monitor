@@ -27,6 +27,11 @@ Examples:
 - Add validation steps and results
 - Include screenshots for UI changes
 - Mention rollback plan for risky changes
+- Add a short retrospective in PR description/comment:
+  - user directives/corrections,
+  - delays encountered,
+  - automation opportunities (approved prefixes),
+  - defaults for next run.
 
 ## Local Flow
 ```bash
@@ -44,4 +49,3 @@ gh pr create --base main --fill
 3. Conversation resolved
 4. Squash merge
 5. Delete feature branch
-

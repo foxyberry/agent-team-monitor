@@ -73,17 +73,15 @@ class AgentChatService:
             db.refresh(row)
             return row
 
-    def list_messages(self, room_key: str, limit: int = 50) -> list[AgentChatMessage]:
+    def list_messages(self, room_key: str, limit: int = 50, before_id: int | None = None) -> list[AgentChatMessage]:
         with self._session_factory() as db:
             room = db.scalar(select(AgentChatRoom).where(AgentChatRoom.room_key == room_key))
             if room is None:
                 return []
-            query = (
-                select(AgentChatMessage)
-                .where(AgentChatMessage.room_id == room.id)
-                .order_by(AgentChatMessage.created_at.desc())
-                .limit(limit)
-            )
+            query = select(AgentChatMessage).where(AgentChatMessage.room_id == room.id)
+            if before_id is not None:
+                query = query.where(AgentChatMessage.id < before_id)
+            query = query.order_by(AgentChatMessage.id.desc()).limit(limit)
             rows = list(db.scalars(query).all())
             rows.reverse()
             return rows
